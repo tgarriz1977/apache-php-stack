@@ -36,6 +36,11 @@ apache-php-stack/
 │   ├── letsencrypt/         # certbot install + issuance + renewal timer
 │   ├── postgresql/          # install + idempotent DB/role creation
 │   └── redis/               # install + enable (default localhost bind)
+├── docker/                  # Docker Compose replica (Debian 13) for staging/dev
+│   ├── compose.yml
+│   ├── web/                 # Dockerfile (debian:trixie + apache2) + vhost + entrypoint
+│   ├── site/                # site files, mounted to /var/www/html
+│   └── .env.example         # copy to .env (git-ignored)
 ├── test-*.yml               # git-ignored syntax-check playbooks (local only)
 └── docs/                    # design doc and implementation plan
 ```
@@ -130,6 +135,52 @@ After a real deployment, verify with:
 curl -I https://<domain>/     # expect 2xx or a 3xx to the app
 curl -s http://<domain>/      # expect a 301 to https://<domain>/ (when LE enabled)
 ```
+
+## Docker (staging/dev)
+
+The `docker/` directory contains a Docker Compose stack that **replicates** the
+Ansible stack (Apache + PHP-FPM + PostgreSQL + Redis) on **Debian 13 (trixie)**
+containers, for local staging/dev. It is not a deployment of the playbook —
+the playbook still targets real Debian/Ubuntu hosts.
+
+| Service | Image | Notes |
+|---|---|---|
+| `web` | `Dockerfile` (FROM `debian:trixie` + `apache2`, `a2enmod proxy_fcgi`) | Same packages the `apache` role installs (on trixie the proxy_fcgi module ships with `apache2`); HTTP-only vhost (no Let's Encrypt in Docker) |
+| `php-fpm` | `php:8.4-fpm-trixie` | PHP 8.4 is the Debian 13 default; talked to over TCP 9000 (no unix socket between containers) |
+| `db` | `postgres:17-trixie` | Persistent volume; credentials from `.env` |
+| `redis` | `redis:8-trixie` | Default localhost-style bind; exposed only on `127.0.0.1:6379` |
+
+**Site files mount:** `docker/site/` is mounted (read-only) to `/var/www/html`
+in **both** the `web` and `php-fpm` containers. The `web` container needs the
+files to serve them; `php-fpm` needs them at the same path because with TCP
+FCGI it receives `SCRIPT_FILENAME=/var/www/html/...` and must open that file in
+*its own* filesystem. Edit files in `docker/site/` and they are served
+immediately, with no rebuild or restart (`index.php` is a `phpinfo()`
+placeholder to verify the Apache → proxy_fcgi → PHP-FPM chain). To deploy your
+own site, put its files in `docker/site/` (or override the mount in
+`compose.yml`).
+
+> **TCP vs unix socket:** the Ansible `apache` role uses
+> `proxy:unix:/run/php/*.sock|fcgi://localhost` (same host, unix socket). The
+> Docker web vhost instead uses `proxy:fcgi://php-fpm:9000` because there is no
+> shared unix socket between containers — PHP-FPM is reached over TCP. The pipe
+> form (`proxy:tcp://...|fcgi://localhost`) does **not** work here: Apache
+> resolves the `fcgi://localhost` part, not the `proxy:tcp://` target.
+
+```bash
+cd docker
+cp .env.example .env          # then set POSTGRES_PASSWORD (and DOMAIN)
+docker compose up -d
+curl http://localhost/        # expect phpinfo() output from PHP 8.4
+```
+
+PostgreSQL listens on `127.0.0.1:5432` and Redis on `127.0.0.1:6379` on the
+host (not on the LAN).
+
+Note: Let's Encrypt is intentionally **not** part of the Docker stack — a
+`--standalone` certbot run needs a publicly reachable port 80 for the real
+domain. For staging without TLS, the web container serves HTTP directly
+(equivalent to the `letsencrypt_enabled: false` branch of the Ansible vhosts).
 
 ## GitHub repository
 

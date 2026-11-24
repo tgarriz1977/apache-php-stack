@@ -5,6 +5,7 @@
 .vault_pass
 .vault_pass.*
 vault_pass*
+docker/.env
 
 # Build / venv / editor noise
 __pycache__/

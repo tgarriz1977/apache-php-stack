@@ -1,0 +1,90 @@
+# Docker Compose — replica del stack Ansible (Apache + PHP-FPM + PostgreSQL + Redis)
+# para staging/dev local, todo sobre Debian 13 (trixie).
+#
+# Uso:
+#   cd docker
+#   cp .env.example .env        # y edita POSTGRES_PASSWORD (y DOMAIN si querés)
+#   docker compose up -d
+#   curl http://localhost/      # index.php servido por Apache vía proxy_fcgi → php-fpm
+#
+# Notas:
+# - Sin Let's Encrypt: en docker no hay dominio público con puerto 80. Esto
+#   equivale al branch "LE deshabilitado" del vhost Ansible (HTTP-only,
+#   DocumentRoot, sin redirect a HTTPS).
+# - PHP-FPM se habla por TCP (9000) porque entre contenedores no hay socket unix.
+# - Los archivos del sitio se montan en el contenedor web: ./site → /var/www/html.
+#   Editá ahí el sitio y se ve sin recargar (PHP se procesa en cada request).
+
+services:
+  web:
+    build: ./web
+    image: local/apache-php-web
+    container_name: apachephps_web
+    hostname: web
+    ports:
+      - "80:80"
+    volumes:
+      # Los archivos del sitio: editalos en ./site y aparecen en el contenedor.
+      - ./site:/var/www/html:ro
+    environment:
+      DOMAIN: "${DOMAIN:-example.com}"
+    networks:
+      - web
+    depends_on:
+      php-fpm:
+        condition: service_started
+
+  php-fpm:
+    image: php:8.4-fpm-trixie
+    container_name: apachephps_php-fpm
+    hostname: php-fpm
+    # La imagen php:8.4-fpm-trixie escucha en [::]:9000 (todas las interfaces),
+    # por lo que es alcanzable desde el contenedor web. No hace falta forzarlo.
+    volumes:
+      # Los mismos archivos del sitio, en la MISMA ruta (/var/www/html) que usa
+      # Apache. PHP-FPM recibe SCRIPT_FILENAME=/var/www/html/... y debe poder
+      # abrir ese archivo en SU filesystem; por eso el montaje va también aquí.
+      - ./site:/var/www/html:ro
+    networks:
+      - web
+    restart: unless-stopped
+
+  db:
+    image: postgres:17-trixie
+    container_name: apachephps_db
+    hostname: db
+    environment:
+      POSTGRES_DB: "${POSTGRES_DB:-app}"
+      POSTGRES_USER: "${POSTGRES_USER:-app}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in docker/.env}"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      # Solo accesible desde el host (no expuesto en la LAN).
+      - "127.0.0.1:5432:5432"
+    networks:
+      - web
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-app} -d ${POSTGRES_DB:-app}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8-trixie
+    container_name: apachephps_redis
+    hostname: redis
+    # Bind por defecto de Redis: solo la red interna + host en 127.0.0.1:6379.
+    ports:
+      - "127.0.0.1:6379:6379"
+    networks:
+      - web
+    restart: unless-stopped
+
+networks:
+  web:
+    driver: bridge
+
+volumes:
+  db-data:
