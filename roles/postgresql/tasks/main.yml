@@ -1,0 +1,50 @@
+---
+# PostgreSQL: install, enable/start, and provision the database + login role
+# idempotently. db_password is only ever supplied via the PGPASSWORD env var
+# of the create task — never on a command line and never in logged output.
+
+- name: Validate database and role names
+  ansible.builtin.assert:
+    that:
+      - db_user is match('^[a-zA-Z_][a-zA-Z0-9_]*$')
+      - db_name is match('^[a-zA-Z_][a-zA-Z0-9_]*$')
+    fail_msg: >-
+      db_user and db_name must match ^[a-zA-Z_][a-zA-Z0-9_]*$
+      (letter or underscore first, alphanumerics and underscores after).
+
+- name: Install PostgreSQL
+  ansible.builtin.apt:
+    name: postgresql
+    state: present
+    update_cache: true
+
+- name: Enable and start PostgreSQL
+  ansible.builtin.service:
+    name: postgresql
+    state: started
+    enabled: true
+
+- name: Check whether the DB role exists
+  ansible.builtin.command: >-
+    sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='{{ db_user }}'"
+  register: db_role_check
+  changed_when: false
+
+- name: Create DB role (if missing)
+  ansible.builtin.shell: |
+    sudo -u postgres psql -v ON_ERROR_STOP=1 -q -v p="$PGPASSWORD" <<'SQL'
+    CREATE ROLE {{ db_user }} LOGIN PASSWORD :p
+    SQL
+  environment:
+    PGPASSWORD: "{{ db_password }}"
+  when: db_role_check.stdout | trim != '1'
+
+- name: Check whether the database exists
+  ansible.builtin.command: >-
+    sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='{{ db_name }}'"
+  register: db_name_check
+  changed_when: false
+
+- name: Create database (if missing)
+  ansible.builtin.command: "sudo -u postgres createdb -O {{ db_user }} {{ db_name }}"
+  when: db_name_check.stdout | trim != '1'
