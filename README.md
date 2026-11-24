@@ -133,11 +133,12 @@ curl -s http://<domain>/      # expect a 301 to https://<domain>/ (when LE enabl
 
 ## GitHub repository
 
-The canonical copy of this repository will live at
-**[github.com/tgarriz/apache-php-stack](https://github.com/tgarriz/apache-php-stack)**
-(private). Status: pending — the repository has not been created yet (see
-*Verification* above). The URL will be confirmed in `README.md` once the
-repository exists.
+The canonical copy of this repository is
+**[github.com/tgarriz1977/apache-php-stack](https://github.com/tgarriz1977/apache-php-stack)**.
+Status: the repository was created manually by the author, but the `main`
+branch has **not been pushed yet** — the credentials in the local environment
+are rejected by GitHub. Once the push lands, this section will note that it
+is live at the URL above.
 
 ## License
 
