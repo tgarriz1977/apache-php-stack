@@ -1,0 +1,48 @@
+---
+# PHP-FPM: install packages, enable the service, and expose its unix socket
+# to the apache role via the php_fpm_socket fact.
+
+- name: Install PHP packages
+  ansible.builtin.apt:
+    name:
+      - php-fpm
+      - php-cli
+      - php-pgsql
+      - php-mbstring
+      - php-xml
+      - php-curl
+    state: present
+    update_cache: true
+
+- name: Detect PHP-FPM service name
+  ansible.builtin.shell: |
+    systemctl list-units 'php*-fpm.service' --all --no-pager --no-legend 2>/dev/null \
+      | awk '{print $1}' | grep -E '^php[0-9]' | head -n1 || true
+  register: php_fpm_service_out
+  changed_when: false
+
+- name: Set PHP-FPM service name fact
+  ansible.builtin.set_fact:
+    php_fpm_service: "{{ (php_fpm_service_out.stdout | default('') | trim) or 'php-fpm' }}"
+
+- name: Assert a PHP-FPM service can be used
+  ansible.builtin.assert:
+    that:
+      - php_fpm_service is match('^php[0-9]') or php_fpm_service == 'php-fpm'
+    fail_msg: "Could not detect a php-fpm service; expected php{X.Y}-fpm or php-fpm."
+
+- name: Enable and start PHP-FPM
+  ansible.builtin.service:
+    name: "{{ php_fpm_service }}"
+    state: started
+    enabled: true
+
+- name: Detect PHP-FPM socket
+  ansible.builtin.shell: 'ls /run/php/*-fpm.sock 2>/dev/null | head -n1'
+  register: php_fpm_socket_out
+  changed_when: false
+  failed_when: php_fpm_socket_out.stdout | trim == ''
+
+- name: Set PHP-FPM socket fact
+  ansible.builtin.set_fact:
+    php_fpm_socket: "{{ php_fpm_socket_out.stdout | trim }}"

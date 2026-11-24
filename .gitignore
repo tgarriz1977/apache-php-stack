@@ -19,3 +19,4 @@ __pycache__/
 
 # Superpowers plan workspace (git-ignored scratch)
 .superpowers/
+test-*.yml
