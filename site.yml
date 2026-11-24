@@ -1,0 +1,13 @@
+---
+# Apache + PHP-FPM + PostgreSQL + Redis + Let's Encrypt (Debian/Ubuntu)
+# Run from the repo root:  ansible-playbook site.yml
+
+- name: Configure the web stack
+  hosts: web
+  become: true
+  roles:
+    - php-fpm
+    - apache
+    - letsencrypt
+    - postgresql
+    - redis

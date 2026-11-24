@@ -1,0 +1,21 @@
+# Ansible retry files (host-local state)
+*.retry
+
+# Credential / secret files — never commit these
+.vault_pass
+.vault_pass.*
+vault_pass*
+
+# Build / venv / editor noise
+__pycache__/
+*.pyc
+.venv/
+.DS_Store
+
+# Test & tool scratch
+.cache/
+.tmp/
+.pytest_cache/
+
+# Superpowers plan workspace (git-ignored scratch)
+.superpowers/

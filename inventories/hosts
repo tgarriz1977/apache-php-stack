@@ -1,0 +1,12 @@
+# Example inventory — replace with your hosts.
+# A group named "web" is required; site.yml targets it.
+
+[web]
+# localhost ansible_connection=local ansible_host=localhost
+
+# Typical deployment:
+# web01 ansible_host=192.0.2.10 ansible_user=root
+# web02 ansible_host=192.0.2.11 ansible_user=root
+
+# For a fully-local run (installs directly on this machine):
+localhost ansible_connection=local ansible_host=localhost

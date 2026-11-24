@@ -1,0 +1,27 @@
+---
+# Site-wide variables for the Apache + PHP-FPM + PostgreSQL + Redis + Let's Encrypt stack.
+# Override any of these with --extra-vars or by editing this file / a higher-precedence
+# group_vars or host_vars file (e.g. group_vars/web.yml).
+
+# --- Public site ---
+# Public DNS name the stack is served on and the Let's Encrypt certificate is issued for.
+# Must be a real, publicly-resolvable name when letsencrypt_enabled is true.
+domain: "example.com"
+
+# Email passed to certbot (--agree-tos -m ...). Informational only.
+letsencrypt_email: "admin@example.com"
+
+# Generate an automatic Let's Encrypt certificate for {{ domain }}?
+# Set false for staging/local testing so no issuance is attempted.
+letsencrypt_enabled: true
+
+# --- Document root ---
+docroot: "/var/www/html"
+
+# --- PostgreSQL ---
+# Name of the database and the role/login user created by the postgresql role.
+# db_password is a PLACEHOLDER — override for real deployments
+# (ansible-playbook -e "db_password=...", Ansible Vault, or a host_vars file).
+db_name: "app"
+db_user: "app"
+db_password: "changeme"
