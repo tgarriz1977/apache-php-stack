@@ -1,0 +1,37 @@
+---
+# Let's Encrypt: install certbot, issue the certificate if missing, and
+# ensure Apache is running again after issuance.
+
+- name: Install certbot
+  ansible.builtin.apt:
+    name:
+      - certbot
+      - python3-certbot-apache
+    state: present
+    update_cache: true
+
+- name: Enable certbot renewal timer
+  ansible.builtin.service:
+    name: certbot.timer
+    state: started
+    enabled: true
+
+- name: Check whether the certificate already exists
+  ansible.builtin.stat:
+    path: "/etc/letsencrypt/live/{{ domain }}/fullchain.pem"
+  register: certbot_fullchain
+
+- name: Issue certificate if missing (Let's Encrypt enabled)
+  ansible.builtin.command: >-
+    certbot --standalone --non-interactive --agree-tos
+    -m {{ letsencrypt_email }} -d {{ domain }}
+  when: letsencrypt_enabled and not certbot_fullchain.stat.exists
+  # Apache is stopped (by the apache role) so certbot can bind port 80.
+  # On non-zero exit the task fails and the play aborts loudly — never
+  # proceed silently without a certificate.
+
+- name: Ensure Apache is started
+  ansible.builtin.service:
+    name: apache2
+    state: started
+    enabled: true

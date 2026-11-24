@@ -1,0 +1,3 @@
+---
+# Intentionally empty: this role has no config files to reload carefully.
+# The apache role owns Apache restart-on-change handling.
