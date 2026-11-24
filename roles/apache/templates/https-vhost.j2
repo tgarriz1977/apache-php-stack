@@ -1,0 +1,25 @@
+{% if letsencrypt_enabled %}
+# HTTPS vhost — serves PHP via php-fpm socket.
+# Canonical domain: {{ domain }}
+<VirtualHost *:443>
+    ServerName {{ domain }}
+
+    SSLEngine on
+    SSLCertificateFile /etc/letsencrypt/live/{{ domain }}/fullchain.pem
+    SSLCertificateKeyFile /etc/letsencrypt/live/{{ domain }}/privkey.pem
+
+    DocumentRoot {{ docroot }}
+
+    <Directory "{{ docroot }}">
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    DirectoryIndex index.php index.html index.htm
+
+    <FilesMatch "\.php$">
+        SetHandler "proxy:unix:{{ php_fpm_socket }}|fcgi://localhost"
+    </FilesMatch>
+</VirtualHost>
+{% endif %}

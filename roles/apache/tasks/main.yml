@@ -1,0 +1,90 @@
+---
+- name: Install Apache packages
+  ansible.builtin.apt:
+    name:
+      - apache2
+      - libapache2-mod-proxy
+      - libapache2-mod-proxy-fcgi
+    state: present
+    update_cache: true
+
+- name: Enable required Apache modules
+  ansible.builtin.command: a2enmod {{ item }}
+  args:
+    creates: /etc/apache2/mods-enabled/{{ item }}.load
+  loop:
+    - proxy
+    - proxy_fcgi
+    - headers
+    - rewrite
+
+- name: Remove default Apache site
+  ansible.builtin.file:
+    path: /etc/apache2/sites-enabled/000-default.conf
+    state: absent
+
+- name: Ensure docroot exists with correct ownership
+  ansible.builtin.file:
+    path: "{{ docroot }}"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: "0755"
+
+- name: Template HTTP vhost
+  ansible.builtin.template:
+    src: http-vhost.j2
+    dest: /etc/apache2/sites-available/site.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart apache
+
+- name: Template HTTPS vhost (only when Let's Encrypt enabled)
+  ansible.builtin.template:
+    src: https-vhost.j2
+    dest: /etc/apache2/sites-available/site-ssl.conf
+    owner: root
+    group: root
+    mode: "0644"
+  when: letsencrypt_enabled
+  notify: restart apache
+
+- name: Remove stale HTTPS vhost when LE disabled
+  ansible.builtin.file:
+    path: /etc/apache2/sites-available/site-ssl.conf
+    state: absent
+  when: not letsencrypt_enabled
+
+- name: Enable HTTP vhost symlink
+  ansible.builtin.file:
+    src: /etc/apache2/sites-available/site.conf
+    dest: /etc/apache2/sites-enabled/site.conf
+    state: link
+  notify: restart apache
+
+- name: Remove stale HTTPS symlink when LE disabled
+  ansible.builtin.file:
+    path: /etc/apache2/sites-enabled/site-ssl.conf
+    state: absent
+  when: not letsencrypt_enabled
+
+- name: Enable HTTPS vhost symlink when LE enabled
+  ansible.builtin.file:
+    src: /etc/apache2/sites-available/site-ssl.conf
+    dest: /etc/apache2/sites-enabled/site-ssl.conf
+    state: link
+  when: letsencrypt_enabled
+  notify: restart apache
+
+- name: Stop Apache when Let's Encrypt enabled (certbot needs port 80)
+  ansible.builtin.service:
+    name: apache2
+    state: stopped
+  when: letsencrypt_enabled
+
+- name: Start Apache when Let's Encrypt disabled
+  ansible.builtin.service:
+    name: apache2
+    state: started
+  when: not letsencrypt_enabled

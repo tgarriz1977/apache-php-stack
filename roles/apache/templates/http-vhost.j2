@@ -1,0 +1,29 @@
+{% if letsencrypt_enabled %}
+# HTTP vhost — redirects everything to HTTPS (certbot issues the cert later).
+# Canonical domain: {{ domain }}
+<VirtualHost *:80>
+    ServerName {{ domain }}
+
+    RewriteEngine On
+    RewriteRule ^/(.*)$ https://{{ domain }}/$1 [R=301,L]
+</VirtualHost>
+{% else %}
+# HTTP vhost — serves the docroot directly (Let's Encrypt disabled).
+# Canonical domain: {{ domain }}
+<VirtualHost *:80>
+    ServerName {{ domain }}
+    DocumentRoot {{ docroot }}
+
+    <Directory "{{ docroot }}">
+        Options FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    DirectoryIndex index.php index.html index.htm
+
+    <FilesMatch "\.php$">
+        SetHandler "proxy:unix:{{ php_fpm_socket }}|fcgi://localhost"
+    </FilesMatch>
+</VirtualHost>
+{% endif %}

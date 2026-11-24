@@ -1,0 +1,8 @@
+---
+- name: restart apache
+  ansible.builtin.service:
+    name: apache2
+    state: restarted
+  # When LE is enabled, Apache is intentionally stopped so certbot can bind
+  # port 80 — restarting here would break certificate issuance.
+  when: not letsencrypt_enabled
