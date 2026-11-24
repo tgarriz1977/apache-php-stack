@@ -142,7 +142,7 @@ Failure modes the spec implies but the naive plan misses:
 - Update: `README.md` (add repo URL).
 
 **Interfaces:**
-- Produces: `github.com/tgarriz/apache-php-stack` (private) — name/description adjustable.
+- Produces: `github.com/tgarriz1977/apache-php-stack` (public — chosen by the author) — name/description adjustable.
 
 - [ ] **Step 1:** Create the repo via GitHub API using the token in `~/.git-credentials` (never printed): `POST /user/repos` with `{name, description, private: true}`.
 - [ ] **Step 2:** Add `remote origin`, push `main` (credential helper reads `~/.git-credentials` automatically via `git`).

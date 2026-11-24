@@ -135,10 +135,9 @@ curl -s http://<domain>/      # expect a 301 to https://<domain>/ (when LE enabl
 
 The canonical copy of this repository is
 **[github.com/tgarriz1977/apache-php-stack](https://github.com/tgarriz1977/apache-php-stack)**.
-Status: the repository was created manually by the author, but the `main`
-branch has **not been pushed yet** — the credentials in the local environment
-are rejected by GitHub. Once the push lands, this section will note that it
-is live at the URL above.
+Status: **live** — `main` is pushed to this URL
+(`git ls-remote origin` confirms the remote HEAD). The repository is **public**
+(chosen by the author), created manually rather than via the GitHub API.
 
 ## License
 
