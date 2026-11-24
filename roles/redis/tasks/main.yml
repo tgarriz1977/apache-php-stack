@@ -1,0 +1,15 @@
+---
+# Redis: install and enable/start the service. The default localhost bind
+# (127.0.0.1:6379) shipped by the Debian/Ubuntu package is left untouched.
+
+- name: Install Redis
+  ansible.builtin.apt:
+    name: redis-server
+    state: present
+    update_cache: true
+
+- name: Enable and start Redis
+  ansible.builtin.service:
+    name: redis-server
+    state: started
+    enabled: true
